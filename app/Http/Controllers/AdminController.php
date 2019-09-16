@@ -8,6 +8,7 @@ use App\Http\Models\Domain;
 use App\Http\Models\Currency;
 use App\Http\Models\Customer;
 use App\Http\Models\Invoices;
+use App\Http\Models\Log;
 use App\Http\Models\Product;
 use App\Http\Models\Employees;
 use App\Http\Utils\Utils;
@@ -86,7 +87,6 @@ class AdminController
     public function showForgotPasswordPage()
     {
         return view('forgot-password');
-
     }
 
     public function resetPassword() {
@@ -145,17 +145,6 @@ class AdminController
         return view('profile')->with('user', $user);
     }
 
-    public function showMyPage() {
-        $user = session()->get('user');
-        $user_type = session()->get('user-type');
-
-        if ($user_type == 3) {
-            return redirect("/customers/detail/$user->id");
-        } else {
-            return view('profile')->with('user', $user);
-        }
-    }
-
     public function editProfile() {
         $id = request('id');
         $password = request('password');
@@ -183,490 +172,23 @@ class AdminController
             ->with('success', 'You have successfully updated your profile.');
     }
 
-    public function showCustomersPage()
-    {
-        $customers = Customer::get();
-        return view('customers')->with('customers', $customers);
-    }
-
-    public function showCustomerAddPage()
-    {
-        return view('customer_add');
-    }
-
-    public function showCustomerEditPage()
-    {
-        $id = request('id');
-        $customer = Customer::where('id', $id)->first();
-        if ($customer != null) {
-            return view('customer_edit')->with([
-                'customer' => $customer
-            ]);
-        }
-        return redirect('/customers');
-    }
-
-    public function showCustomerDetailPage()
-    {
-        $id = request('id');
-        $customer = Customer::where('id', $id)->first();
-
-        // Permission check
-        $user_type = session()->get('user-type');
-        $user = session()->get('user');
-        if($user_type === 3 && $user->id != $id) {
-            return redirect('/my-page');
-        }
-
-        $products = Product::where('customer_id', $id)->with('category','currency')->get();
-        if ($customer != null) {
-            return view('customer_detail')->with([
-                'customer' => $customer,
-                'products' => $products
-            ]);
-        }
-        return redirect('/customers');
-    }
-
-    public function addCustomer()
-    {
-        $first_name = request('first-name');
-        $last_name = request('last-name');
-        $email = request('email');
-        $password = request('password');
-        $birthday = request('birthday');
-        $gender = request('gender');
-        $phonenumber = request('phone-number');
-        $company = request('company');
-        $address = request('address');
-        $city = request('city');
-        $state = request('state');
-        $zipcode = request('zip-code');
-        $start_date = request('start-date');
-        $expire_date = request('expire-date');
-        $price = request('price');
-
-        request()->validate([
-            'first-name' => 'required',
-            'last-name' => 'required',
-            'email' => 'required|email',
-            'password' => 'required',
-            'birthday' => 'required|date',
-            'phone-number' => 'required',
-            'start-date' => 'required|date',
-            'expire-date' => 'required|date',
-            'price' => 'required|numeric',
-        ]);
-
-        $birthday = strtotime($birthday);
-        $birthday = date('Y-m-d', $birthday);
-
-        $start_date = strtotime($start_date);
-        $start_date = date('Y-m-d', $start_date);
-
-        $expire_date = strtotime($expire_date);
-        $expire_date = date('Y-m-d', $expire_date);
-
-        $customer = new Customer();
-        $customer->first_name = $first_name;
-        $customer->last_name = $last_name;
-        $customer->email = $email;
-        $customer->password = hash::make($password);
-        $customer->birthday = $birthday;
-        $customer->gender = $gender;
-        $customer->phonenumber = $phonenumber;
-        $customer->company = $company;
-        $customer->address = $address;
-        $customer->city = $city;
-        $customer->state = $state;
-        $customer->zipcode = $zipcode;
-        $customer->start_date = $start_date;
-        $customer->expire_date = $expire_date;
-        $customer->price = $price;
-
-        $customer->save();
-
-        $invoice = new Invoices();
-        $invoice->customer_id = $customer->id;
-        $invoice->start_date = $start_date;
-        $invoice->expire_date = $expire_date;
-        $invoice->price = $price;
-
-        $invoice->save();
-
-        Customer::where('id', $customer->id)->update([
-            'current_invoice_id' => $invoice->id
-        ]);
-
-        return back()
-            ->with('success', 'You have successfully add new customer.');
-    }
-
-    public function editCustomer()
-    {
-        $id = request('id');
-        $first_name = request('first-name');
-        $last_name = request('last-name');
-        $email = request('email');
-        $password = request('password');
-        $birthday = request('birthday');
-        $gender = request('gender');
-        $phonenumber = request('phone-number');
-        $company = request('company');
-        $address = request('address');
-        $city = request('city');
-        $state = request('state');
-        $zipcode = request('zip-code');
-
-        request()->validate([
-            'first-name' => 'required',
-            'last-name' => 'required',
-            'email' => 'required|email',
-            'birthday' => 'required|date',
-            'phone-number' => 'required',
-        ]);
-
-        $birthday = strtotime($birthday);
-        $birthday = date('Y-m-d', $birthday);
-
-        if ($password != '') {
-            Customer::where('id', $id)->update([
-                'first_name' => $first_name,
-                'last_name' => $last_name,
-                'email' => $email,
-                'password' => hash::make($password),
-                'birthday' => $birthday,
-                'gender' => $gender,
-                'phonenumber' => $phonenumber,
-                'company' => $company,
-                'address' => $address,
-                'city' => $city,
-                'state' => $state,
-                'zipcode' => $zipcode,
-            ]);
-        } else {
-            Customer::where('id', $id)->update([
-                'first_name' => $first_name,
-                'last_name' => $last_name,
-                'email' => $email,
-                'birthday' => $birthday,
-                'gender' => $gender,
-                'phonenumber' => $phonenumber,
-                'company' => $company,
-                'address' => $address,
-                'city' => $city,
-                'state' => $state,
-                'zipcode' => $zipcode,
-            ]);
-        }
-
-        return back()
-            ->with('success', 'You have successfully updated the customer\'s account');
-    }
-
-    public function delCustomer()
-    {
-        $id = request('id');
-        Customer::where('id', $id)->delete();
-
-        return Utils::makeResponse();
-    }
-
-    public function toggleCustomerEnable()
-    {
-        $id = request('id');
-        $enable_flag = Customer::where('id', $id)->first()->enable_flag;
-
-        Customer::where('id', $id)->update([
-            'enable_flag' => 1 - $enable_flag,
-        ]);
-
-        return Utils::makeResponse();
-    }
-
-    public function toggleCustomerAddProduct()
-    {
-        $customer_id = request('customer_id');
-        $product_id = request('product_id');
-        $exist_flag = CustomerProducts::where([
-            'customer_id' => $customer_id,
-            'product_id' => $product_id,
-        ])->exists();
-
-        if ($exist_flag) {
-            CustomerProducts::where([
-                'customer_id' => $customer_id,
-                'product_id' => $product_id,
-            ])->delete();
-        } else {
-            $customer_product = new CustomerProducts();
-            $customer_product->customer_id = $customer_id;
-            $customer_product->product_id = $product_id;
-            $customer_product->save();
-        }
-
-        return Utils::makeResponse();
-    }
-
-    public function printCustomerInvoice()
-    {
-        $id = request('id');
-        $customer = Customer::where('id', $id)->first();
-        $invoices = Invoices::where('customer_id', $id)->get();
-        $total = Invoices::where('customer_id', $id)->sum('price');
-
-        $pdf = PDF::loadView('customer_invoice_pdf', [
-            'customer' => $customer,
-            'invoices' => $invoices,
-            'total' => $total,
-            ]);
-        //$pdf->save(storage_path('app/public') . '_filename.pdf');
-        return $pdf->download('customer_invoice.pdf');
-
-    }
-
     public function showProductsPage()
     {
         $current_user_id = session()->get('user')->id;
-        $products = Product::where('customer_id', $current_user_id)->get();
+        $products = Product::where('customer_id', $current_user_id)->with('domain')->get();
+
+        for ($i = 0; $i < count($products); $i ++) {
+            $used_ccount = Log::where('msg_to', 'like', '%'.$products[$i]['domain']['domain'])->count(DB::raw('DISTINCT msg_to'));
+            $products[$i]['used'] = $used_ccount;
+            $products[$i]['free'] = $products[$i]['alloweduser'] - $used_ccount;
+            if ($products[$i]['free'] < 0)
+                $products[$i]['free'] = 0;
+        }
 
         return view('products')->with([
             'product_array' => $products,
         ]);
 
-    }
-
-    public function showProductAddPage()
-    {
-        $customer_id = request('customer_id');
-        if (session()->get('user-type') == 3) {
-            $customer_id = session()->get('user')->id;
-        }
-        $categories = Domain::where('customer_id', $customer_id)->get();
-        $currency_list = Currency::get();
-        return view('product_add')->with([
-            'categories' => $categories,
-            'customer_id' => $customer_id,
-            'currency_list' => $currency_list
-        ]);
-    }
-
-    public function showProductEditPage()
-    {
-        $id = request('id');
-        $product = Product::where('id', $id)->first();
-        $categories = Domain::where('customer_id', $product->customer_id)->get();
-        $currency_list = Currency::get();
-        if ($product != null) {
-            return view('product_edit')->with([
-                'product' => $product,
-                'categories' => $categories,
-                'currency_list' => $currency_list,
-            ]);
-        }
-        return redirect('/products');
-    }
-
-    public function showProductDetailPage()
-    {
-        $id = request('id');
-        $product = Product::where('id', $id)->first();
-        $categories = Domain::get();
-        if ($product != null) {
-            return view('product_detail')->with([
-                'product' => $product,
-                'categories' => $categories
-            ]);
-        }
-        return redirect('/products');
-    }
-
-    public function addProduct()
-    {
-        $customer_id = request('customer_id');
-        if (session()->get('user-type') == 3) {
-            $customer_id = session()->get('user')->id;
-        }
-        $name = request('product-name');
-        $name_ar = request('product-name-ar');
-        $category_id = request('category');
-        $price = request('product-price');
-        $video_url = request('video-url');
-        $description = request('product-description');
-        $description_ar = request('product-description-ar');
-        $currency = request('currency');
-
-        request()->validate([
-            'image' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:20480',
-            'product-name' => 'required',
-            'product-price' => 'required',
-            'category' => 'required',
-            'currency' => 'required',
-        ]);
-
-        $imageName = time() . '.' . request()->image->getClientOriginalExtension();
-
-        $original_image_path = public_path('media/images/products/original');
-        if (!file_exists($original_image_path)) {
-            mkdir($original_image_path);
-        }
-
-        $appview_image_path = public_path('media/images/products/appview');
-        if (!file_exists($appview_image_path)) {
-            mkdir($appview_image_path);
-        }
-
-        $thumbnail_image_path = public_path('media/images/products/thumbnail');
-        if (!file_exists($thumbnail_image_path)) {
-            mkdir($thumbnail_image_path);
-        }
-
-        //Save original image
-        request()->image->move($original_image_path, $imageName);
-
-        // generate appview image
-        Image::make($original_image_path . DIRECTORY_SEPARATOR . $imageName)
-            ->resize(1200, 1200, function($constraint) {
-                $constraint->aspectRatio();
-            })
-            ->save($appview_image_path . DIRECTORY_SEPARATOR . $imageName);
-
-        // generate thumbnail image
-        Image::make($original_image_path . DIRECTORY_SEPARATOR . $imageName)
-            ->fit(320, 320)
-            ->save($thumbnail_image_path . DIRECTORY_SEPARATOR . $imageName);
-
-        if (preg_match('%(?:youtube(?:-nocookie)?\.com/(?:[^/]+/.+/|(?:v|e(?:mbed)?)/|.*[?&]v=)|youtu\.be/)([^"&?/ ]{11})%i', $video_url, $match))
-            $video_id = $match[1];
-        else $video_id = $video_url;
-
-        $product = new Product();
-        $product->customer_id = $customer_id;
-        $product->name = $name;
-        $product->name_second = $name_ar;
-        $product->price = $price;
-        $product->currency_id = $currency;
-        $product->category_id = $category_id;
-        $product->description = $description;
-        $product->description_second = $description_ar;
-        $product->picture = $imageName;
-        $product->video_id = $video_id;
-        $product->video_url = $video_url;
-
-        $product->save();
-
-        return back()
-            ->with('success', 'You have successfully add new product.');
-    }
-
-    public function editProduct()
-    {
-        $id = request('id');
-        $name = request('product-name');
-        $name_ar = request('product-name-ar');
-        $category_id = request('category');
-        $price = request('product-price');
-        $description = request('product-description');
-        $description_ar = request('product-description-ar');
-        $currency = request('currency');
-        $video_url = request('video-url');
-
-        request()->validate([
-            'image' => 'image|mimes:jpeg,png,jpg,gif,svg|max:20480',
-            'product-name' => 'required',
-            'product-price' => 'required',
-            'category' => 'required',
-            'currency' => 'required',
-        ]);
-
-        if (preg_match('%(?:youtube(?:-nocookie)?\.com/(?:[^/]+/.+/|(?:v|e(?:mbed)?)/|.*[?&]v=)|youtu\.be/)([^"&?/ ]{11})%i', $video_url, $match))
-            $video_id = $match[1];
-        else $video_id = $video_url;
-
-        if (isset(request()->image)) {
-            $imageName = time() . '.' . request()->image->getClientOriginalExtension();
-
-            $original_image_path = public_path('media/images/products/original');
-            if (!file_exists($original_image_path)) {
-                mkdir($original_image_path);
-            }
-
-            $thumbnail_image_path = public_path('media/images/products/thumbnail');
-            if (!file_exists($thumbnail_image_path)) {
-                mkdir($thumbnail_image_path);
-            }
-
-            //Save original image
-            request()->image->move($original_image_path, $imageName);
-
-            // generate thumbnail image
-            Image::make($original_image_path . DIRECTORY_SEPARATOR . $imageName)
-                ->fit(320, 320)
-                ->save($thumbnail_image_path . DIRECTORY_SEPARATOR . $imageName);
-
-            Product::where('id', $id)->update([
-                'name' => $name,
-                'name_second' => $name_ar,
-                'price' => $price,
-                'currency_id' => $currency,
-                'category_id' => $category_id,
-                'description' => $description,
-                'description_second' => $description_ar,
-                'video_id' => $video_id,
-                'video_url' => $video_url,
-                'picture' => $imageName,
-            ]);
-        } else {
-            Product::where('id', $id)->update([
-                'name' => $name,
-                'name_second' => $name_ar,
-                'price' => $price,
-                'currency_id' => $currency,
-                'category_id' => $category_id,
-                'description' => $description,
-                'description_second' => $description_ar,
-                'video_id' => $video_id,
-                'video_url' => $video_url
-            ]);
-        }
-        return back()
-            ->with('success', 'You have successfully updated the product.');
-    }
-
-    public function delProduct()
-    {
-        $id = request('id');
-        Product::where('id', $id)->delete();
-
-        return Utils::makeResponse();
-    }
-
-    public function toggleProductVisible()
-    {
-        $id = request('id');
-        $show_flag = Product::where('id', $id)->first()->show_flag;
-
-        Product::where('id', $id)->update([
-            'show_flag' => 1 - $show_flag,
-        ]);
-
-        return Utils::makeResponse();
-    }
-
-    public function showCategoryFirstPage()
-    {
-        if (session()->get('user-type') != 3) {
-            $customers_cnt = Customer::count();
-            if ($customers_cnt > 0) {
-                $customers = Customer::get();
-                return redirect('categories/' . $customers[0]->id);
-            }
-
-            return view('customer_add')->with([
-                'warning' => 'Warning'
-            ]);
-        }
-        return redirect('categories/'.session()->get('user')->id);
     }
 
     public function showDomainPage()
@@ -678,162 +200,242 @@ class AdminController
         ]);
     }
 
-    public function showCategoryAddPage()
-    {
-        $customer_id = request('customer_id');
-        if (session()->get('user-type') == 3) {
-            $customer_id = session()->get('user')->id;
-        }
-        return view('category_add')->with('customer_id', $customer_id);
-    }
+    public function showStatisticsPage() {
 
-    public function showCategoryEditPage()
-    {
-        $id = request('id');
-        $category = Domain::where('id', $id)->first();
-        if ($category != null) {
-            return view('category_edit')->with([
-                'category' => $category
-            ]);
-        }
-        return redirect('/categories');
-    }
+        $date_from = request('date_from');
+        $date_to = request('date_to');
+        $stats_type = request('stats_type');
 
-    public function showCategoryDetailPage()
-    {
-        $id = request('id');
-        $category = Domain::where('id', $id)->first();
-        $products = Product::where('category_id', $id)->get();
-        if ($category != null) {
-            return view('category_detail')->with([
-                'category' => $category,
-                'products' => $products
-            ]);
-        }
-        return redirect('/categories');
-    }
+        $initial_clause = '(';
+        $domains = Domain::where('customer_id', session()->get('user')->id)->get();
 
-    public function addCategory()
-    {
-        $customer_id = request('customer_id');
-        if (session()->get('user-type') == 3) {
-            $customer_id = session()->get('user')->id;
-        }
-        $name = request('category-name');
-        $name_ar = request('category-name-ar');
-        $tags = request('category-tags');
-        $tags_ar = request('category-tags-ar');
-
-        request()->validate([
-            'image' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:20480',
-            'category-name' => 'required',
-        ]);
-
-        $imageName = time() . '.' . request()->image->getClientOriginalExtension();
-
-        $original_image_path = public_path('media/images/categories/original');
-        if (!file_exists($original_image_path)) {
-            mkdir($original_image_path);
-        }
-
-        $thumbnail_image_path = public_path('media/images/categories/thumbnail');
-        if (!file_exists($thumbnail_image_path)) {
-            mkdir($thumbnail_image_path);
-        }
-
-        //Save original image
-        request()->image->move($original_image_path, $imageName);
-
-        // generate thumbnail image
-        Image::make($original_image_path . DIRECTORY_SEPARATOR . $imageName)
-            ->fit(320, 320)
-            ->save($thumbnail_image_path . DIRECTORY_SEPARATOR . $imageName);
-
-        $category = new Domain();
-        $category->customer_id = $customer_id;
-        $category->name = $name;
-        $category->tags = $tags;
-        $category->name_second = $name_ar;
-        $category->tags_second = $tags_ar;
-        $category->picture = $imageName;
-
-        $category->save();
-
-        return back()
-            ->with('success', 'You have successfully add new category.')
-            ->with('image', $imageName);
-    }
-
-    public function editCategory()
-    {
-        $id = request('id');
-        $name = request('category-name');
-        $name_ar = request('category-name-ar');
-        $tags = request('category-tags');
-        $tags_ar = request('category-tags-ar');
-
-        request()->validate([
-            'image' => 'image|mimes:jpeg,png,jpg,gif,svg|max:20480',
-            'category-name' => 'required',
-        ]);
-
-        if (isset(request()->image)) {
-            $imageName = time() . '.' . request()->image->getClientOriginalExtension();
-
-            $original_image_path = public_path('media/images/categories/original');
-            if (!file_exists($original_image_path)) {
-                mkdir($original_image_path);
+        for($i = 0; $i < count($domains); $i ++) {
+            $initial_clause .= '`msg_to` like \'%'.$domains[$i]['domain'].'\' ';
+            if ($i < count($domains) - 1) {
+                $initial_clause .= 'OR ';
             }
-
-            $thumbnail_image_path = public_path('media/images/categories/thumbnail');
-            if (!file_exists($thumbnail_image_path)) {
-                mkdir($thumbnail_image_path);
-            }
-
-            //Save original image
-            request()->image->move($original_image_path, $imageName);
-
-            // generate thumbnail image
-            Image::make($original_image_path . DIRECTORY_SEPARATOR . $imageName)
-                ->fit(320, 320)
-                ->save($thumbnail_image_path . DIRECTORY_SEPARATOR . $imageName);
-            Domain::where('id', $id)->update([
-                'name' => $name,
-                'tags' => $tags,
-                'name_second' => $name_ar,
-                'tags_second' => $tags_ar,
-                'picture' => $imageName
-            ]);
-        } else {
-            Domain::where('id', $id)->update([
-                'name' => $name,
-                'tags' => $tags,
-                'name_second' => $name_ar,
-                'tags_second' => $tags_ar
-            ]);
         }
-        return back()
-            ->with('success', 'You have successfully updated category.');
-    }
+        $initial_clause .= ')';
 
-    public function delCategory()
-    {
-        $id = request('id');
-        Domain::where('id', $id)->delete();
-        Product::where('category_id', $id)->delete();
 
-        return Utils::makeResponse();
-    }
+        $result = array();
+        $where_date_clause = '';
+        if(isset($date_from))
+            $where_date_clause .= 'AND `timestamp` >= \''. $date_from .'\'';
+        else $date_from = '';
+        if(isset($date_to))
+            $where_date_clause .= 'AND `timestamp` <= \''. $date_to .'\'';
+        else $date_to = '';
 
-    public function toggleCategoryVisible()
-    {
-        $id = request('id');
-        $show_flag = Domain::where('id', $id)->first()->show_flag;
+        $action_array = ['sent', 'spam', 'attachment', 'virus'];
+        if(isset($stats_type)) {
+            if($stats_type == 1) {
+                $pre_result = array();
+                for($i = 0; $i < count($action_array); $i ++) {
+                    $query = 'SELECT 
+                                SUBSTRING( `timestamp`, 1, 10 ) time, 
+                                count( * ) val
+                            FROM
+                                `logs` 
+                            WHERE'.$initial_clause.
+                        'AND action = \''.$action_array[$i].'\''.$where_date_clause.
+                        'GROUP BY
+                                SUBSTRING( `timestamp`, 1, 10 )';
+                    $pre_result[$i] = DB::select($query);
+                }
 
-        Domain::where('id', $id)->update([
-            'show_flag' => 1 - $show_flag,
+                $query = 'SELECT
+                                SUBSTRING( `timestamp`, 1, 10 ) time 
+                            FROM
+                                `logs`
+                            WHERE'.$initial_clause.$where_date_clause.'
+                            GROUP BY
+                            SUBSTRING( `timestamp`, 1, 10 )';
+                $result1 = DB::select($query);
+
+                $cnt = 0;
+                foreach ($result1 as $one) {
+                    $result[$cnt++] = array('time' => $one->time);
+                }
+
+                for($i = 0; $i < count($pre_result); $i ++) {
+                    for ($j = 0; $j < count($result); $j ++) {
+                        foreach ($pre_result[$i] as $pre_result_one) {
+                            if ($result[$j]['time'] == $pre_result_one->time) {
+                                $result[$j][$action_array[$i]] = $pre_result_one->val;
+                            }
+                        }
+                    }
+
+                }
+
+            } else if ($stats_type == 2) {
+                $pre_result = array();
+                for($i = 0; $i < count($action_array); $i ++) {
+                    $query = 'SELECT 
+                                SUBSTRING( `timestamp`, 1, 7 ) time, 
+                                count( * ) val
+                            FROM
+                                `logs` 
+                            WHERE'.$initial_clause.
+                        'AND action = \''.$action_array[$i].'\''.$where_date_clause.
+                        'GROUP BY
+                                SUBSTRING( `timestamp`, 1, 7 )';
+                    $pre_result[$i] = DB::select($query);
+                }
+
+                $query = 'SELECT
+                                SUBSTRING( `timestamp`, 1, 7 ) time 
+                            FROM
+                                `logs`
+                            WHERE'.$initial_clause.$where_date_clause.'
+                            GROUP BY
+                            SUBSTRING( `timestamp`, 1, 7 )';
+                $result1 = DB::select($query);
+
+                $cnt = 0;
+                foreach ($result1 as $one) {
+                    $result[$cnt++] = array('time' => $one->time);
+                }
+
+                for($i = 0; $i < count($pre_result); $i ++) {
+                    for ($j = 0; $j < count($result); $j ++) {
+                        foreach ($pre_result[$i] as $pre_result_one) {
+                            if ($result[$j]['time'] == $pre_result_one->time) {
+                                $result[$j][$action_array[$i]] = $pre_result_one->val;
+                            }
+                        }
+                    }
+
+                }
+            } else {
+                $pre_result = array();
+                for($i = 0; $i < count($action_array); $i ++) {
+                    $query = 'SELECT 
+                                SUBSTRING( `timestamp`, 1, 4 ) time, 
+                                count( * ) val
+                            FROM
+                                `logs` 
+                            WHERE'.$initial_clause.
+                        'AND action = \''.$action_array[$i].'\''.$where_date_clause.
+                        'GROUP BY
+                                SUBSTRING( `timestamp`, 1, 4 )';
+                    $pre_result[$i] = DB::select($query);
+                }
+
+                $query = 'SELECT
+                                SUBSTRING( `timestamp`, 1, 4 ) time 
+                            FROM
+                                `logs`
+                            WHERE'.$initial_clause.$where_date_clause.'
+                            GROUP BY
+                            SUBSTRING( `timestamp`, 1, 4 )';
+                $result1 = DB::select($query);
+
+                $cnt = 0;
+                foreach ($result1 as $one) {
+                    $result[$cnt++] = array('time' => $one->time);
+                }
+
+                for($i = 0; $i < count($pre_result); $i ++) {
+                    for ($j = 0; $j < count($result); $j ++) {
+                        foreach ($pre_result[$i] as $pre_result_one) {
+                            if ($result[$j]['time'] == $pre_result_one->time) {
+                                $result[$j][$action_array[$i]] = $pre_result_one->val;
+                            }
+                        }
+                    }
+
+                }
+            }
+        } else $stats_type = 0;
+
+        return view('statistics')->with([
+            'result' => $result,
+            'stats_type' => $stats_type,
+            'date_from' => $date_from,
+            'date_to' => $date_to,
         ]);
+    }
 
-        return Utils::makeResponse();
+    public function showSearchPage() {
+
+        $send_from = request('send_from');
+        $send_to = request('send_to');
+        $date_from = request('date_from');
+        $date_to = request('date_to');
+        $show_sent = request('show_sent');
+        $show_spam = request('show_spam');
+        $show_attachment = request('show_attachment');
+        $show_virus = request('show_virus');
+
+        $initial_clause = array();
+        $domains = Domain::where('customer_id', session()->get('user')->id)->get();
+        foreach ($domains as $v) {
+            $initial_clause[] = ['msg_to', 'like', '%'.$v['domain']];
+        }
+
+        $search_clause = array();
+        if (isset($send_from))
+            $search_clause[] = array('msg_from', 'like', "%$send_from%");
+        else $send_from = '';
+
+        if (isset($send_to))
+            $search_clause[] = array('msg_to', 'like', "%$send_to%");
+        else $send_to = '';
+
+        if (isset($date_from))
+            $search_clause[] = ['timestamp', '>=', "$date_from"];
+        else $date_from = '';
+
+        if (isset($date_to))
+            $search_clause[] = ['timestamp', '<=', "$date_to"." 23:59:59"];
+        else $date_to = '';
+
+        $message_type_clause = array();
+        if (isset($show_sent) && $show_sent == 'on')
+            $message_type_clause[] = ['action', 'sent'];
+        else $show_sent = 'off';
+
+        if (isset($show_spam) && $show_spam == 'on')
+            $message_type_clause[] = ['action', 'spam'];
+        else $show_spam = 'off';
+
+        if (isset($show_attachment) && $show_attachment == 'on')
+            $message_type_clause[] = ['action', 'attachment'];
+        else $show_attachment = 'off';
+
+        if (isset($show_virus) && $show_virus == 'on')
+            $message_type_clause[] = ['action', 'virus'];
+        else $show_virus = 'off';
+
+        $search_result = Log::where($search_clause)->
+        where(function ($query) use ($initial_clause) {
+            if (count($initial_clause) > 0) {
+                $query->where([$initial_clause[0]]);
+                for ($i = 1; $i < count($initial_clause); $i++) {
+                    $query->orwhere([$initial_clause[$i]]);
+                }
+            }
+        })->where(function ($query) use ($message_type_clause) {
+            if (count($message_type_clause) > 0) {
+                $query->where([$message_type_clause[0]]);
+                for ($i = 1; $i < count($message_type_clause); $i++) {
+                    $query->orwhere([$message_type_clause[$i]]);
+                }
+            }
+        })->get();
+
+        return view('search')->with([
+            'search_result' => $search_result,
+            'send_from' => $send_from,
+            'send_to' => $send_to,
+            'date_from' => $date_from,
+            'date_to' => $date_to,
+            'show_sent' => $show_sent,
+            'show_spam' => $show_spam,
+            'show_attachment' => $show_attachment,
+            'show_virus' => $show_virus,
+        ]);
     }
 }

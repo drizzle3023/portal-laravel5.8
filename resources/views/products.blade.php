@@ -35,8 +35,11 @@
                     <thead>
                     <tr>
                         <th class="text-center" style="width: 80px;">#</th>
-                        <th class="d-none d-sm-table-cell" style="width: 50%;">Name</th>
-                        <th class="d-none d-sm-table-cell" style="">Allowed user</th>
+                        <th class="d-none d-sm-table-cell" style="width: 30%;">Name</th>
+                        <th class="d-none d-sm-table-cell" style="width: 30%;">Domain</th>
+                        <th class="d-none d-sm-table-cell" style="width: 180px;">Allowed user</th>
+                        <th class="d-none d-sm-table-cell" style="width: 180px;">Currently Used</th>
+                        <th class="d-none d-sm-table-cell" style="width: 180px;">Free</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -47,7 +50,21 @@
                                 {{$product->name}}
                             </td>
                             <td class="d-none d-sm-table-cell">
+                                {{$product->domain->domain}}
+                            </td>
+                            <td class="d-none d-sm-table-cell">
                                 {{$product->alloweduser}}
+                            </td>
+                            <td class="d-none d-sm-table-cell">
+                                @if($product->used > $product->alloweduser)
+                                    <span class="badge badge-danger">{{$product->used}}</span>
+                                @else
+                                    <span class="badge badge-success">{{$product->used}}</span>
+                                @endif
+
+                            </td>
+                            <td class="d-none d-sm-table-cell">
+                                {{$product->free}}
                             </td>
                         </tr>
                     @endforeach

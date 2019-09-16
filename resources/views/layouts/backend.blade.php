@@ -146,15 +146,30 @@ MAIN CONTENT LAYOUT
                 <li class="nav-main-item">
                     <a class="nav-main-link{{ request()->is('domain*') ? ' active' : '' }}"
                        href="{{url('/domains')}}">
-                        <i class="nav-main-link-icon far fa-edit"></i>
+                        <i class="nav-main-link-icon si si-globe"></i>
                         <span class="nav-main-link-name">Domains</span>
                     </a>
                 </li>
                 <li class="nav-main-item">
                     <a class="nav-main-link{{ request()->is('product*') ? ' active' : '' }}"
                        href="{{url('/products')}}">
-                        <i class="nav-main-link-icon si si-notebook"></i>
+                        <i class="nav-main-link-icon si si-puzzle"></i>
                         <span class="nav-main-link-name">Products</span>
+                    </a>
+                </li>
+                <li class="nav-main-heading">Filter</li>
+                <li class="nav-main-item">
+                    <a class="nav-main-link{{ request()->is('statistics*') ? ' active' : '' }}"
+                       href="{{url('/statistics')}}">
+                        <i class="nav-main-link-icon si si-pie-chart"></i>
+                        <span class="nav-main-link-name">Statistics</span>
+                    </a>
+                </li>
+                <li class="nav-main-item">
+                    <a class="nav-main-link{{ request()->is('search*') ? ' active' : '' }}"
+                       href="{{url('/search')}}">
+                        <i class="nav-main-link-icon si si-magnifier"></i>
+                        <span class="nav-main-link-name">Search</span>
                     </a>
                 </li>
             </ul>
