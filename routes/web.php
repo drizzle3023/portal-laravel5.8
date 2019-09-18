@@ -39,6 +39,26 @@ Route::middleware('user-auth')->group(function (){
         Route::get('/', 'AdminController@showSearchPage');
     });
 
+    Route::prefix('whitelist')->group(function () {
+        Route::get('/', 'AdminController@showWhitelistPage');
+        Route::get('/add', 'AdminController@showAddWhitelistPage');
+        Route::post('/add', 'AdminController@addWhitelist');
+        Route::get('/edit/{id}', 'AdminController@showEditWhitelistPage');
+        Route::post('/edit', 'AdminController@editWhitelist');
+        Route::post('/delete', 'AdminController@deleteWhitelist');
+        Route::post('/toggle-enable', 'AdminController@toggleWhitelistEnable');
+    });
+
+    Route::prefix('blacklist')->group(function () {
+        Route::get('/', 'AdminController@showBlacklistPage');
+        Route::get('/add', 'AdminController@showAddBlacklistPage');
+        Route::post('/add', 'AdminController@addBlacklist');
+        Route::get('/edit/{id}', 'AdminController@showEditBlacklistPage');
+        Route::post('/edit', 'AdminController@editBlacklist');
+        Route::post('/delete', 'AdminController@deleteBlacklist');
+        Route::post('/toggle-enable', 'AdminController@toggleBlacklistEnable');
+    });
+
 });
 
 Route::middleware('admin-auth')->group(function (){

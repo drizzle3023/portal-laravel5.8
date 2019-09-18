@@ -172,6 +172,21 @@ MAIN CONTENT LAYOUT
                         <span class="nav-main-link-name">Search</span>
                     </a>
                 </li>
+                <li class="nav-main-heading">Settings</li>
+                <li class="nav-main-item">
+                    <a class="nav-main-link{{ request()->is('whitelist*') ? ' active' : '' }}"
+                       href="{{url('/whitelist')}}">
+                        <i class="nav-main-link-icon fa fa-list"></i>
+                        <span class="nav-main-link-name">Whitelist</span>
+                    </a>
+                </li>
+                <li class="nav-main-item">
+                    <a class="nav-main-link{{ request()->is('blacklist*') ? ' active' : '' }}"
+                       href="{{url('/blacklist')}}">
+                        <i class="nav-main-link-icon fa fa-list-alt"></i>
+                        <span class="nav-main-link-name">Blacklist</span>
+                    </a>
+                </li>
             </ul>
         </div>
         <!-- END Side Navigation -->
@@ -270,6 +285,13 @@ MAIN CONTENT LAYOUT
 <script src="{{ mix('js/laravel.app.js') }}"></script>
 
 <script>window.baseUrl = '{{url('/')}}';</script>
+<script type="text/javascript">
+    $.ajaxSetup({
+        headers: {
+            'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+        }
+    });
+</script>
 @yield('js_after')
 </body>
 </html>

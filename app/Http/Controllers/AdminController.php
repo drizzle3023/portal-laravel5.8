@@ -4,6 +4,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Models\Admin;
+use App\Http\Models\Blacklist;
 use App\Http\Models\Domain;
 use App\Http\Models\Currency;
 use App\Http\Models\Customer;
@@ -11,6 +12,8 @@ use App\Http\Models\Invoices;
 use App\Http\Models\Log;
 use App\Http\Models\Product;
 use App\Http\Models\Employees;
+use App\Http\Models\Whitelist;
+use App\Http\Models\WhitelistRcpt;
 use App\Http\Utils\Utils;
 use Exception;
 use Illuminate\Support\Facades\DB;
@@ -424,7 +427,7 @@ class AdminController
                     $query->orwhere([$message_type_clause[$i]]);
                 }
             }
-        })->get();
+        })->orderBy('timestamp', 'desc')->get();
 
         return view('search')->with([
             'search_result' => $search_result,
@@ -437,5 +440,389 @@ class AdminController
             'show_attachment' => $show_attachment,
             'show_virus' => $show_virus,
         ]);
+    }
+
+    public function showWhitelistPage() {
+        $current_user_id = session()->get('user')->id;
+        $whitelist_arry = array();
+        if (isset($current_user_id)) {
+            $whitelist_arry = Whitelist::where('customer_id', $current_user_id)->get();
+        }
+        return view('whitelist')->with([
+            'whitelist_array' => $whitelist_arry
+        ]);
+    }
+
+    public function showAddWhitelistPage() {
+        return view('whitelist_add');
+    }
+
+    public function addWhitelist()
+    {
+        $current_user_id = session()->get('user')->id;
+        $from = request('from-address');
+        $rcpt = request('rcpt');
+
+        // Check if already exist in blacklist or whitelist
+        if (Blacklist::where([
+            ['customer_id', $current_user_id],
+            ['from', $from],
+            ['rcpt', $rcpt]
+        ])->count() > 0) {
+            return back()
+                ->with('fail', 'You already have the list in Blacklist.');
+        }
+
+        if (Whitelist::where([
+                ['customer_id', $current_user_id],
+                ['from', $from],
+                ['rcpt', $rcpt]
+            ])->count() > 0) {
+            return back()
+                ->with('fail', 'You already have the list in Whitelist.');
+        }
+
+        $whitelist = new Whitelist();
+        $whitelist->customer_id = $current_user_id;
+        $whitelist->from = $from;
+        $whitelist->rcpt = $rcpt;
+        $whitelist->is_enabled = 1;
+        $whitelist->save();
+
+        if (WhitelistRcpt::where([
+                ['customer_id', $current_user_id],
+                ['whitelistrcpt', $rcpt],
+            ])->count() < 1) {
+            $new_rcpt = new WhitelistRcpt();
+            $new_rcpt->customer_id = $current_user_id;
+            $new_rcpt->whitelistrcpt = $rcpt;
+            $new_rcpt->save();
+        }
+
+        $this->saveBlackAndWhitelistToFile();
+        $this->saveWhitelistRcptToFile();
+
+        return back()
+            ->with('success', 'You have successfully add new whitelist.');
+    }
+
+    public function showEditWhitelistPage() {
+        $id = request('id');
+        $current_user_id = session()->get('user')->id;
+        if (isset($id) && isset($current_user_id)) {
+            $result = Whitelist::where([
+                ['id', $id],
+                ['customer_id', $current_user_id],
+            ])->first();
+            if(isset($result)) {
+                return view('whitelist_edit')->with([
+                    'whitelist' => $result
+                ]);
+            }
+        }
+        return back();
+    }
+
+    public function editWhitelist()
+    {
+        $id = request('id');
+        $current_user_id = session()->get('user')->id;
+        $from = request('from-address');
+        $rcpt = request('rcpt');
+
+        // Check if already exist in blacklist or whitelist
+        if (Blacklist::where([
+                ['customer_id', $current_user_id],
+                ['from', $from],
+                ['rcpt', $rcpt],
+                ['id', '!=' ,$id],
+            ])->count() > 0) {
+            return back()
+                ->with('fail', 'You already have the list in Blacklist.');
+        }
+
+        if (Whitelist::where([
+                ['customer_id', $current_user_id],
+                ['from', $from],
+                ['rcpt', $rcpt],
+                ['id', '!=' ,$id],
+            ])->count() > 0) {
+            return back()
+                ->with('fail', 'You already have the list in Whitelist.');
+        }
+
+        $original_rcpt = Whitelist::where('id', $id)->first()->rcpt;
+        Whitelist::where('id', $id)->update([
+            'from' => $from,
+            'rcpt' => $rcpt
+        ]);
+
+        WhitelistRcpt::where([
+            ['customer_id', $current_user_id],
+            ['whitelistrcpt', $original_rcpt],
+        ])->update([
+            'whitelistrcpt' => $rcpt
+        ]);
+
+        $this->saveBlackAndWhitelistToFile();
+        $this->saveWhitelistRcptToFile();
+
+        return back()
+            ->with('success', 'You have successfully update whitelist.');
+    }
+
+    public function deleteWhitelist() {
+        $id = request('id');
+        $current_user_id = session()->get('user')->id;
+
+        if (isset($id) && Whitelist::where([
+            ['id', $id],
+            ['customer_id', $current_user_id],
+            ])->count() > 0) {
+            $rcpt = Whitelist::where('id', $id)->first()->rcpt;
+            Whitelist::where('id', $id)->delete();
+            WhitelistRcpt::where([
+                ['customer_id', $current_user_id],
+                ['whitelistrcpt', $rcpt],
+            ])->delete();
+
+            $this->saveBlackAndWhitelistToFile();
+            $this->saveWhitelistRcptToFile();
+
+            return Utils::makeResponse();
+        }
+
+        return Utils::makeResponse([], 'Failed');
+    }
+
+    public function toggleWhitelistEnable() {
+        $id = request('id');
+        $current_user_id = session()->get('user')->id;
+
+        if (isset($id) && Whitelist::where([
+            ['id', $id],
+            ['customer_id', $current_user_id],
+            ])->count() > 0) {
+
+            $enable_flag = Whitelist::where('id', $id)->first()->is_enabled;
+            $rcpt = Whitelist::where('id', $id)->first()->rcpt;
+            if ($enable_flag != 1) {
+                $enable_flag = 1;
+                if (WhitelistRcpt::where([
+                        ['customer_id', $current_user_id],
+                        ['whitelistrcpt', $rcpt],
+                    ])->count() < 1) {
+                    $new_rcpt = new WhitelistRcpt();
+                    $new_rcpt->customer_id = $current_user_id;
+                    $new_rcpt->whitelistrcpt = $rcpt;
+                    $new_rcpt->save();
+                }
+            } else {
+                $enable_flag = 0;
+                WhitelistRcpt::where([
+                    ['customer_id', $current_user_id],
+                    ['whitelistrcpt', $rcpt],
+                ])->delete();
+            }
+
+            Whitelist::where('id', $id)->update([
+                'is_enabled' => $enable_flag,
+            ]);
+
+        }
+
+        $this->saveBlackAndWhitelistToFile();
+        $this->saveWhitelistRcptToFile();
+
+        return Utils::makeResponse([], 'Failed');
+    }
+
+    public function showBlacklistPage() {
+        $current_user_id = session()->get('user')->id;
+        $blacklist_arry = array();
+        if (isset($current_user_id)) {
+            $blacklist_arry = Blacklist::where('customer_id', $current_user_id)->get();
+        }
+        return view('blacklist')->with([
+            'blacklist_array' => $blacklist_arry
+        ]);
+    }
+
+    public function showAddBlacklistPage() {
+        return view('blacklist_add');
+    }
+
+    public function addBlacklist()
+    {
+        $current_user_id = session()->get('user')->id;
+        $from = request('from-address');
+        $rcpt = request('rcpt');
+
+        // Check if already exist in blacklist or whitelist
+        if (Blacklist::where([
+                ['customer_id', $current_user_id],
+                ['from', $from],
+                ['rcpt', $rcpt]
+            ])->count() > 0) {
+            return back()
+                ->with('fail', 'You already have the list in Blacklist.');
+        }
+
+        if (Whitelist::where([
+                ['customer_id', $current_user_id],
+                ['from', $from],
+                ['rcpt', $rcpt]
+            ])->count() > 0) {
+            return back()
+                ->with('fail', 'You already have the list in Whitelist.');
+        }
+
+        $blacklist = new Blacklist();
+        $blacklist->customer_id = $current_user_id;
+        $blacklist->from = $from;
+        $blacklist->rcpt = $rcpt;
+        $blacklist->is_enabled = 1;
+        $blacklist->save();
+
+        $this->saveBlackAndWhitelistToFile();
+        $this->saveWhitelistRcptToFile();
+
+        return back()
+            ->with('success', 'You have successfully add new blacklist.');
+    }
+
+    public function showEditBlacklistPage() {
+        $id = request('id');
+        $current_user_id = session()->get('user')->id;
+        if (isset($id) && isset($current_user_id)) {
+            $result = Blacklist::where([
+                ['id', $id],
+                ['customer_id', $current_user_id],
+            ])->first();
+            if(isset($result)) {
+                return view('blacklist_edit')->with([
+                    'blacklist' => $result
+                ]);
+            }
+        }
+        return back();
+    }
+
+    public function editBlacklist()
+    {
+        $id = request('id');
+        $current_user_id = session()->get('user')->id;
+        $from = request('from-address');
+        $rcpt = request('rcpt');
+
+        // Check if already exist in blacklist or whitelist
+        if (Blacklist::where([
+                ['customer_id', $current_user_id],
+                ['from', $from],
+                ['rcpt', $rcpt],
+                ['id', '!=' ,$id],
+            ])->count() > 0) {
+            return back()
+                ->with('fail', 'You already have the list in Blacklist.');
+        }
+
+        if (Whitelist::where([
+                ['customer_id', $current_user_id],
+                ['from', $from],
+                ['rcpt', $rcpt],
+                ['id', '!=' ,$id],
+            ])->count() > 0) {
+            return back()
+                ->with('fail', 'You already have the list in Whitelist.');
+        }
+
+        Blacklist::where('id', $id)->update([
+            'from' => $from,
+            'rcpt' => $rcpt
+        ]);
+
+        $this->saveBlackAndWhitelistToFile();
+        $this->saveWhitelistRcptToFile();
+
+        return back()
+            ->with('success', 'You have successfully update blacklist.');
+    }
+
+    public function deleteBlacklist() {
+        $id = request('id');
+        $current_user_id = session()->get('user')->id;
+
+        if (isset($id) && Blacklist::where([
+                ['id', $id],
+                ['customer_id', $current_user_id],
+            ])->count() > 0) {
+            Blacklist::where('id', $id)->delete();
+
+            $this->saveBlackAndWhitelistToFile();
+            $this->saveWhitelistRcptToFile();
+
+            return Utils::makeResponse();
+        }
+
+        return Utils::makeResponse([], 'Failed');
+    }
+
+    public function toggleBlacklistEnable() {
+        $id = request('id');
+        $current_user_id = session()->get('user')->id;
+
+        if (isset($id) && Blacklist::where([
+                ['id', $id],
+                ['customer_id', $current_user_id],
+            ])->count() > 0) {
+
+            $enable_flag = Blacklist::where('id', $id)->first()->is_enabled;
+
+            Blacklist::where('id', $id)->update([
+                'is_enabled' => 1 - $enable_flag,
+            ]);
+        }
+
+        $this->saveBlackAndWhitelistToFile();
+        $this->saveWhitelistRcptToFile();
+
+        return Utils::makeResponse([], 'Failed');
+    }
+
+    function saveBlackAndWhitelistToFile() {
+        $black_list = Blacklist::where('is_enabled', 1)->get();
+        $white_list = Whitelist::where('is_enabled', 1)->get();
+
+        $content = "#blacklist\n\n";
+        foreach ($black_list as $v) {
+            $content .= "uniq-rule-id {\n";
+            $content .= "from = \"" . $v->from . "\";\n";
+            $content .= "rcpt = \"" . $v->rcpt . "\";\n";
+            $content .= "apply {\nactions {\nreject = yes;\n}\n}\n}\n\n";
+        }
+
+        $content .= "#whitelist\n\n";
+        foreach ($white_list as $v) {
+            $content .= "uniq-rule-id {\n";
+            $content .= "from = \"" . $v->from . "\";\n";
+            $content .= "rcpt = \"" . $v->rcpt . "\";\n";
+            $content .= "whitelist = yes;\n";
+            $content .= "}\n\n";
+        }
+
+        $myfile = fopen("white-and-blacklist-settings.txt", "w") or die("Unable to open file!");
+        fwrite($myfile, $content);
+        fclose($myfile);
+    }
+
+    function saveWhitelistRcptToFile() {
+        $white_list_rcpt = WhitelistRcpt::get();
+        $content = "";
+        foreach ($white_list_rcpt as $v) {
+            $content .= $v->whitelistrcpt . "\n";
+        }
+        $myfile = fopen("whitelist-recipients.txt", "w") or die("Unable to open file!");
+        fwrite($myfile, $content);
+        fclose($myfile);
     }
 }
