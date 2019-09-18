@@ -73,9 +73,18 @@
 
                             <div class="form-group">
                                 <label for="dm-project-new-name">
-                                    RCPT <span class="text-danger">*</span>
+                                    To Address
                                 </label>
-                                <input type="text" class="form-control" name="rcpt" placeholder="eg: @domain1.com" value="{{$whitelist->rcpt}}">
+                                <div class="input-group">
+                                    <input type="text" class="form-control text-right" name="rcpt" placeholder="eg: sales" value="{{$rcpt}}">
+                                    <select class="custom-select" name="domain" style="border-radius: 0px 4px 4px 0px;">
+                                        <option value="0" disabled="disabled" selected>Domain</option>
+                                        @foreach($domain_array as $domain)
+                                            <option value="{{$domain->id}}" @if($domain->id == $domain_id) selected @endif>{{'@'.$domain->domain}}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+
                             </div>
                         </div>
                     </div>
@@ -86,7 +95,7 @@
                         <div class="col-lg-8 col-xl-5 offset-lg-4">
                             <div class="form-group">
                                 <button type="submit" class="btn btn-success">
-                                    <i class="fa fa-check-circle mr-1"></i> Edit Whitelist
+                                    <i class="fa fa-check-circle mr-1"></i> Save entry
                                 </button>
                                 <a class="btn btn-warning" href="{{url('/whitelist')}}">
                                     <i class="fa fa-times-circle mr-1"></i> Cancel

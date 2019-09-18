@@ -454,7 +454,10 @@ class AdminController
     }
 
     public function showAddWhitelistPage() {
-        return view('whitelist_add');
+        $domain_array = Domain::where('customer_id', session()->get('user')->id)->get();
+        return view('whitelist_add')->with([
+            'domain_array' => $domain_array
+        ]);
     }
 
     public function addWhitelist()
@@ -462,6 +465,23 @@ class AdminController
         $current_user_id = session()->get('user')->id;
         $from = request('from-address');
         $rcpt = request('rcpt');
+        $domain_id = request('domain');
+
+        request()->validate([
+            'domain' => 'required',
+        ]);
+
+        $domain = Domain::where('id', $domain_id)->first();
+        if(isset($domain)) {
+            $domain_name = $domain->domain;
+            if ($rcpt != '') {
+                $rcpt .= '@' . $domain_name;
+            } else $rcpt = $domain_name;
+        } else {
+            return back()->with('fail', 'Currently selected domain is not correct.');
+        }
+
+        if (!isset($from)) $from = '';
 
         // Check if already exist in blacklist or whitelist
         if (Blacklist::where([
@@ -509,14 +529,36 @@ class AdminController
     public function showEditWhitelistPage() {
         $id = request('id');
         $current_user_id = session()->get('user')->id;
+        $domain_array = Domain::where('customer_id', session()->get('user')->id)->get();
+
         if (isset($id) && isset($current_user_id)) {
             $result = Whitelist::where([
                 ['id', $id],
                 ['customer_id', $current_user_id],
             ])->first();
             if(isset($result)) {
+                if (count(explode("@", $result->rcpt)) > 1 ) {
+                    $domain_name = explode("@", $result->rcpt)[1];
+                    $rcpt = explode("@", $result->rcpt)[0];
+                } else {
+                    $domain_name = explode("@", $result->rcpt)[0];
+                    $rcpt = '';
+                }
+
+                $domain = Domain::where([
+                    ['customer_id', $current_user_id],
+                    ['domain', $domain_name],
+                ])->first();
+
+                if (isset($domain))
+                    $domain_id = $domain->id;
+                else return back()->with('fail', 'Something went wrong.');
+
                 return view('whitelist_edit')->with([
-                    'whitelist' => $result
+                    'whitelist' => $result,
+                    'rcpt' => $rcpt,
+                    'domain_id' => $domain_id,
+                    'domain_array' => $domain_array
                 ]);
             }
         }
@@ -529,6 +571,19 @@ class AdminController
         $current_user_id = session()->get('user')->id;
         $from = request('from-address');
         $rcpt = request('rcpt');
+        $domain_id = request('domain');
+
+        $domain = Domain::where('id', $domain_id)->first();
+        if(isset($domain)) {
+            $domain_name = $domain->domain;
+            if ($rcpt != '') {
+                $rcpt .= '@' . $domain_name;
+            } else $rcpt = $domain_name;
+        } else {
+            return back()->with('fail', 'Currently selected domain is not correct.');
+        }
+
+        if (!isset($from)) $from = '';
 
         // Check if already exist in blacklist or whitelist
         if (Blacklist::where([
@@ -649,7 +704,10 @@ class AdminController
     }
 
     public function showAddBlacklistPage() {
-        return view('blacklist_add');
+        $domain_array = Domain::where('customer_id', session()->get('user')->id)->get();
+        return view('blacklist_add')->with([
+            'domain_array' => $domain_array
+        ]);
     }
 
     public function addBlacklist()
@@ -657,6 +715,19 @@ class AdminController
         $current_user_id = session()->get('user')->id;
         $from = request('from-address');
         $rcpt = request('rcpt');
+        $domain_id = request('domain');
+
+        $domain = Domain::where('id', $domain_id)->first();
+        if(isset($domain)) {
+            $domain_name = $domain->domain;
+            if ($rcpt != '') {
+                $rcpt .= '@' . $domain_name;
+            } else $rcpt = $domain_name;
+        } else {
+            return back()->with('fail', 'Currently selected domain is not correct.');
+        }
+
+        if (!isset($from)) $from = '';
 
         // Check if already exist in blacklist or whitelist
         if (Blacklist::where([
@@ -694,14 +765,37 @@ class AdminController
     public function showEditBlacklistPage() {
         $id = request('id');
         $current_user_id = session()->get('user')->id;
+        $domain_array = Domain::where('customer_id', session()->get('user')->id)->get();
+
         if (isset($id) && isset($current_user_id)) {
             $result = Blacklist::where([
                 ['id', $id],
                 ['customer_id', $current_user_id],
             ])->first();
             if(isset($result)) {
+
+                if (count(explode("@", $result->rcpt)) > 1 ) {
+                    $domain_name = explode("@", $result->rcpt)[1];
+                    $rcpt = explode("@", $result->rcpt)[0];
+                } else {
+                    $domain_name = explode("@", $result->rcpt)[0];
+                    $rcpt = '';
+                }
+
+                $domain = Domain::where([
+                    ['customer_id', $current_user_id],
+                    ['domain', $domain_name],
+                ])->first();
+
+                if (isset($domain))
+                    $domain_id = $domain->id;
+                else return back()->with('fail', 'Something went wrong.');
+
                 return view('blacklist_edit')->with([
-                    'blacklist' => $result
+                    'blacklist' => $result,
+                    'rcpt' => $rcpt,
+                    'domain_id' => $domain_id,
+                    'domain_array' => $domain_array
                 ]);
             }
         }
@@ -714,6 +808,19 @@ class AdminController
         $current_user_id = session()->get('user')->id;
         $from = request('from-address');
         $rcpt = request('rcpt');
+        $domain_id = request('domain');
+
+        $domain = Domain::where('id', $domain_id)->first();
+        if(isset($domain)) {
+            $domain_name = $domain->domain;
+            if ($rcpt != '') {
+                $rcpt .= '@' . $domain_name;
+            } else $rcpt = $domain_name;
+        } else {
+            return back()->with('fail', 'Currently selected domain is not correct.');
+        }
+
+        if (!isset($from)) $from = '';
 
         // Check if already exist in blacklist or whitelist
         if (Blacklist::where([
@@ -795,7 +902,8 @@ class AdminController
 
         $content = "#blacklist\n\n";
         foreach ($black_list as $v) {
-            $content .= "uniq-rule-id {\n";
+            $rule_id = $this->generateRandomString() . $v->id . 'b';
+            $content .= $rule_id . " {\n";
             $content .= "from = \"" . $v->from . "\";\n";
             $content .= "rcpt = \"" . $v->rcpt . "\";\n";
             $content .= "apply {\nactions {\nreject = yes;\n}\n}\n}\n\n";
@@ -803,7 +911,8 @@ class AdminController
 
         $content .= "#whitelist\n\n";
         foreach ($white_list as $v) {
-            $content .= "uniq-rule-id {\n";
+            $rule_id = $this->generateRandomString() . $v->id . 'w';
+            $content .= $rule_id . " {\n";
             $content .= "from = \"" . $v->from . "\";\n";
             $content .= "rcpt = \"" . $v->rcpt . "\";\n";
             $content .= "whitelist = yes;\n";
@@ -824,5 +933,15 @@ class AdminController
         $myfile = fopen("whitelist-recipients.txt", "w") or die("Unable to open file!");
         fwrite($myfile, $content);
         fclose($myfile);
+    }
+
+    function generateRandomString($length = 6) {
+        $characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        $charactersLength = strlen($characters);
+        $randomString = '';
+        for ($i = 0; $i < $length; $i++) {
+            $randomString .= $characters[rand(0, $charactersLength - 1)];
+        }
+        return $randomString;
     }
 }

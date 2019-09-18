@@ -31,14 +31,14 @@
             <div class="block-content block-content-full">
                 <div style="margin-bottom: 10px;">
                     <a class="btn btn-primary" href="{{url('/blacklist/add')}}">
-                        <i class="si si-plus"></i> Add list</a>
+                        <i class="si si-plus"></i> Add entry</a>
                 </div>
                 <table class="table table-bordered table-striped table-vcenter js-dataTable-full-pagination">
                     <thead>
                     <tr>
                         <th class="text-center" style="width: 80px;">#</th>
                         <th class="d-none d-sm-table-cell" style="">From</th>
-                        <th class="d-none d-sm-table-cell" style="">RCPT</th>
+                        <th class="d-none d-sm-table-cell" style="">To</th>
                         <th class="d-none d-sm-table-cell" style="width: 150px;">Enable</th>
                         <th class="d-none d-sm-table-cell" style="width: 150px;">Action</th>
                     </tr>
