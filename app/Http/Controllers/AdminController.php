@@ -13,7 +13,6 @@ use App\Http\Models\Log;
 use App\Http\Models\Product;
 use App\Http\Models\Employees;
 use App\Http\Models\Whitelist;
-use App\Http\Models\WhitelistRcpt;
 use App\Http\Utils\Utils;
 use Exception;
 use Illuminate\Support\Facades\DB;
@@ -509,16 +508,6 @@ class AdminController
         $whitelist->is_enabled = 1;
         $whitelist->save();
 
-        if (WhitelistRcpt::where([
-                ['customer_id', $current_user_id],
-                ['whitelistrcpt', $rcpt],
-            ])->count() < 1) {
-            $new_rcpt = new WhitelistRcpt();
-            $new_rcpt->customer_id = $current_user_id;
-            $new_rcpt->whitelistrcpt = $rcpt;
-            $new_rcpt->save();
-        }
-
         $this->saveBlackAndWhitelistToFile();
         $this->saveWhitelistRcptToFile();
 
@@ -612,13 +601,6 @@ class AdminController
             'rcpt' => $rcpt
         ]);
 
-        WhitelistRcpt::where([
-            ['customer_id', $current_user_id],
-            ['whitelistrcpt', $original_rcpt],
-        ])->update([
-            'whitelistrcpt' => $rcpt
-        ]);
-
         $this->saveBlackAndWhitelistToFile();
         $this->saveWhitelistRcptToFile();
 
@@ -636,10 +618,6 @@ class AdminController
             ])->count() > 0) {
             $rcpt = Whitelist::where('id', $id)->first()->rcpt;
             Whitelist::where('id', $id)->delete();
-            WhitelistRcpt::where([
-                ['customer_id', $current_user_id],
-                ['whitelistrcpt', $rcpt],
-            ])->delete();
 
             $this->saveBlackAndWhitelistToFile();
             $this->saveWhitelistRcptToFile();
@@ -660,28 +638,9 @@ class AdminController
             ])->count() > 0) {
 
             $enable_flag = Whitelist::where('id', $id)->first()->is_enabled;
-            $rcpt = Whitelist::where('id', $id)->first()->rcpt;
-            if ($enable_flag != 1) {
-                $enable_flag = 1;
-                if (WhitelistRcpt::where([
-                        ['customer_id', $current_user_id],
-                        ['whitelistrcpt', $rcpt],
-                    ])->count() < 1) {
-                    $new_rcpt = new WhitelistRcpt();
-                    $new_rcpt->customer_id = $current_user_id;
-                    $new_rcpt->whitelistrcpt = $rcpt;
-                    $new_rcpt->save();
-                }
-            } else {
-                $enable_flag = 0;
-                WhitelistRcpt::where([
-                    ['customer_id', $current_user_id],
-                    ['whitelistrcpt', $rcpt],
-                ])->delete();
-            }
 
             Whitelist::where('id', $id)->update([
-                'is_enabled' => $enable_flag,
+                'is_enabled' => 1 - $enable_flag,
             ]);
 
         }
@@ -898,7 +857,10 @@ class AdminController
 
     function saveBlackAndWhitelistToFile() {
         $black_list = Blacklist::where('is_enabled', 1)->get();
-        $white_list = Whitelist::where('is_enabled', 1)->get();
+        $white_list = Whitelist::where([
+            ['is_enabled', 1],
+            ['from','!=' ,''],
+        ])->get();
 
         $content = "#blacklist\n\n";
         foreach ($black_list as $v) {
@@ -914,8 +876,12 @@ class AdminController
             $rule_id = $this->generateRandomString() . $v->id . 'w';
             $content .= $rule_id . " {\n";
             $content .= "from = \"" . $v->from . "\";\n";
-            $content .= "rcpt = \"" . $v->rcpt . "\";\n";
-            $content .= "whitelist = yes;\n";
+            if (count(explode('@', $v->rcpt)) > 1 ) {
+                $content .= "rcpt = \"" . $v->rcpt . "\";\n";
+            } else
+                $content .= "rcpt = \"" . '@' . $v->rcpt . "\";\n";
+
+            $content .= "want_spam = yes;\n";
             $content .= "}\n\n";
         }
 
@@ -925,10 +891,13 @@ class AdminController
     }
 
     function saveWhitelistRcptToFile() {
-        $white_list_rcpt = WhitelistRcpt::get();
+        $white_list_rcpt = Whitelist::where([
+            ['from', ''],
+            ['is_enabled', 1],
+        ])->get();
         $content = "";
         foreach ($white_list_rcpt as $v) {
-            $content .= $v->whitelistrcpt . "\n";
+            $content .= $v->rcpt . "\n";
         }
         $myfile = fopen("whitelist-recipients.txt", "w") or die("Unable to open file!");
         fwrite($myfile, $content);
