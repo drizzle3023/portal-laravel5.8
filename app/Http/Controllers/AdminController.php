@@ -411,7 +411,12 @@ class AdminController
             $message_type_clause[] = ['action', 'virus'];
         else $show_virus = 'off';
 
-        $search_result = Log::where($search_clause)->
+        if ($send_from == '' && $send_to == '' && $date_from == '' && $date_to == '' && $show_sent == 'off' && $show_spam == 'off'
+        && $show_attachment == 'off' && $show_virus == 'off') {
+            $search_result = array();
+        }
+        else
+            $search_result = Log::where($search_clause)->
         where(function ($query) use ($initial_clause) {
             if (count($initial_clause) > 0) {
                 $query->where([$initial_clause[0]]);
@@ -474,12 +479,17 @@ class AdminController
         ];
 
         if (isset($from)) {
-            $rule['from-address'] = 'required|email';
-            $custom_message['from-address.email'] = 'The From Address must be a valid email address.';
+            if (count(explode('@', $from)) < 2)
+                return back()->with('fail', 'The From Address must be a valid email address or domain. (For only domain, please put @ in front of domain name.)');
+
+            $rule['from-address'] = 'required|regex:/^[-A-Za-z0-9_.@]+$/|max:64';
+            $custom_message['from-address.regex'] = 'The From Address must be a valid email address.';
+            $custom_message['from-address.max'] = 'The From Address may not be greater than 64 characters.';
         }
         if (isset($rcpt)) {
-            $rule['rcpt'] = 'regex:/^[A-Za-z0-9.]+$/';
+            $rule['rcpt'] = 'regex:/^[-A-Za-z0-9_.]+$/|max:64';
             $custom_message['rcpt.regex'] = 'The To Address format is invalid.';
+            $custom_message['rcpt.max'] = 'The To Address may not be greater than 64 characters.';
         }
         request()->validate($rule, $custom_message);
 
@@ -502,7 +512,7 @@ class AdminController
             ['rcpt', $rcpt]
         ])->count() > 0) {
             return back()
-                ->with('fail', 'You already have the list in Blacklist.');
+                ->with('fail', 'Sender already in Blacklist.');
         }
 
         if (Whitelist::where([
@@ -511,7 +521,7 @@ class AdminController
                 ['rcpt', $rcpt]
             ])->count() > 0) {
             return back()
-                ->with('fail', 'You already have the list in Whitelist.');
+                ->with('fail', 'Sender already in Whitelist.');
         }
 
         $whitelist = new Whitelist();
@@ -583,12 +593,17 @@ class AdminController
         ];
 
         if (isset($from)) {
-            $rule['from-address'] = 'required|email';
-            $custom_message['from-address.email'] = 'The From Address must be a valid email address.';
+            if (count(explode('@', $from)) < 2)
+                return back()->with('fail', 'The From Address must be a valid email address or domain. (For only domain, please put @ in front of domain name.)');
+
+            $rule['from-address'] = 'required|regex:/^[-A-Za-z0-9_.@]+$/|max:64';
+            $custom_message['from-address.regex'] = 'The From Address must be a valid email address.';
+            $custom_message['from-address.max'] = 'The From Address may not be greater than 64 characters.';
         }
         if (isset($rcpt)) {
-            $rule['rcpt'] = 'regex:/^[A-Za-z0-9.]+$/';
+            $rule['rcpt'] = 'regex:/^[-A-Za-z0-9_.]+$/|max:64';
             $custom_message['rcpt.regex'] = 'The To Address format is invalid.';
+            $custom_message['rcpt.max'] = 'The To Address may not be greater than 64 characters.';
         }
         request()->validate($rule, $custom_message);
 
@@ -612,7 +627,7 @@ class AdminController
                 ['id', '!=' ,$id],
             ])->count() > 0) {
             return back()
-                ->with('fail', 'You already have the list in Blacklist.');
+                ->with('fail', 'Sender already in Blacklist.');
         }
 
         if (Whitelist::where([
@@ -622,7 +637,7 @@ class AdminController
                 ['id', '!=' ,$id],
             ])->count() > 0) {
             return back()
-                ->with('fail', 'You already have the list in Whitelist.');
+                ->with('fail', 'Sender already in Whitelist.');
         }
 
         $original_rcpt = Whitelist::where('id', $id)->first()->rcpt;
@@ -714,12 +729,17 @@ class AdminController
         ];
 
         if (isset($from)) {
-            $rule['from-address'] = 'required|email';
-            $custom_message['from-address.email'] = 'The From Address must be a valid email address.';
+            if (count(explode('@', $from)) < 2)
+                return back()->with('fail', 'The From Address must be a valid email address or domain. (For only domain, please put @ in front of domain name.)');
+
+            $rule['from-address'] = 'required|regex:/^[-A-Za-z0-9_.@]+$/|max:64';
+            $custom_message['from-address.regex'] = 'The From Address must be a valid email address.';
+            $custom_message['from-address.max'] = 'The From Address may not be greater than 64 characters.';
         }
         if (isset($rcpt)) {
-            $rule['rcpt'] = 'regex:/^[A-Za-z0-9.]+$/';
+            $rule['rcpt'] = 'regex:/^[-A-Za-z0-9_.]+$/|max:64';
             $custom_message['rcpt.regex'] = 'The To Address format is invalid.';
+            $custom_message['rcpt.max'] = 'The To Address may not be greater than 64 characters.';
         }
         request()->validate($rule, $custom_message);
 
@@ -742,7 +762,7 @@ class AdminController
                 ['rcpt', $rcpt]
             ])->count() > 0) {
             return back()
-                ->with('fail', 'You already have the list in Blacklist.');
+                ->with('fail', 'Sender already in Blacklist.');
         }
 
         if (Whitelist::where([
@@ -751,7 +771,7 @@ class AdminController
                 ['rcpt', $rcpt]
             ])->count() > 0) {
             return back()
-                ->with('fail', 'You already have the list in Whitelist.');
+                ->with('fail', 'Sender already in Whitelist.');
         }
 
         $blacklist = new Blacklist();
@@ -824,12 +844,17 @@ class AdminController
         ];
 
         if (isset($from)) {
-            $rule['from-address'] = 'required|email';
-            $custom_message['from-address.email'] = 'The From Address must be a valid email address.';
+            if (count(explode('@', $from)) < 2)
+                return back()->with('fail', 'The From Address must be a valid email address or domain. (For only domain, please put @ in front of domain name.)');
+
+            $rule['from-address'] = 'required|regex:/^[-A-Za-z0-9_.@]+$/|max:64';
+            $custom_message['from-address.regex'] = 'The From Address must be a valid email address.';
+            $custom_message['from-address.max'] = 'The From Address may not be greater than 64 characters.';
         }
         if (isset($rcpt)) {
-            $rule['rcpt'] = 'regex:/^[A-Za-z0-9.]+$/';
+            $rule['rcpt'] = 'regex:/^[-A-Za-z0-9_.]+$/|max:64';
             $custom_message['rcpt.regex'] = 'The To Address format is invalid.';
+            $custom_message['rcpt.max'] = 'The To Address may not be greater than 64 characters.';
         }
         request()->validate($rule, $custom_message);
 
@@ -853,7 +878,7 @@ class AdminController
                 ['id', '!=' ,$id],
             ])->count() > 0) {
             return back()
-                ->with('fail', 'You already have the list in Blacklist.');
+                ->with('fail', 'Sender already in Blacklist.');
         }
 
         if (Whitelist::where([
@@ -863,7 +888,7 @@ class AdminController
                 ['id', '!=' ,$id],
             ])->count() > 0) {
             return back()
-                ->with('fail', 'You already have the list in Whitelist.');
+                ->with('fail', 'Sender already in Whitelist.');
         }
 
         Blacklist::where('id', $id)->update([
@@ -931,7 +956,12 @@ class AdminController
             $rule_id = $this->generateRandomString() . $v->id . 'b';
             $content .= $rule_id . " {\n";
             $content .= "from = \"" . $v->from . "\";\n";
-            $content .= "rcpt = \"" . $v->rcpt . "\";\n";
+
+            if (count(explode('@', $v->rcpt)) > 1 ) {
+                $content .= "rcpt = \"" . $v->rcpt . "\";\n";
+            } else
+                $content .= "rcpt = \"" . '@' . $v->rcpt . "\";\n";
+
             $content .= "apply {\nactions {\nreject = yes;\n}\n}\n}\n\n";
         }
 
