@@ -466,14 +466,27 @@ class AdminController
         $rcpt = request('rcpt');
         $domain_id = request('domain');
 
-        request()->validate([
+        $rule = [
             'domain' => 'required',
-        ]);
+        ];
+        $custom_message = [
+            'domain.required' => 'You must select Doamin.',
+        ];
+
+        if (isset($from)) {
+            $rule['from-address'] = 'required|email';
+            $custom_message['from-address.email'] = 'The From Address must be a valid email address.';
+        }
+        if (isset($rcpt)) {
+            $rule['rcpt'] = 'regex:/^[A-Za-z0-9.]+$/';
+            $custom_message['rcpt.regex'] = 'The To Address format is invalid.';
+        }
+        request()->validate($rule, $custom_message);
 
         $domain = Domain::where('id', $domain_id)->first();
         if(isset($domain)) {
             $domain_name = $domain->domain;
-            if ($rcpt != '') {
+            if (isset($rcpt) && $rcpt != '') {
                 $rcpt .= '@' . $domain_name;
             } else $rcpt = $domain_name;
         } else {
@@ -561,6 +574,23 @@ class AdminController
         $from = request('from-address');
         $rcpt = request('rcpt');
         $domain_id = request('domain');
+
+        $rule = [
+            'domain' => 'required',
+        ];
+        $custom_message = [
+            'domain.required' => 'You must select Doamin.',
+        ];
+
+        if (isset($from)) {
+            $rule['from-address'] = 'required|email';
+            $custom_message['from-address.email'] = 'The From Address must be a valid email address.';
+        }
+        if (isset($rcpt)) {
+            $rule['rcpt'] = 'regex:/^[A-Za-z0-9.]+$/';
+            $custom_message['rcpt.regex'] = 'The To Address format is invalid.';
+        }
+        request()->validate($rule, $custom_message);
 
         $domain = Domain::where('id', $domain_id)->first();
         if(isset($domain)) {
@@ -676,6 +706,23 @@ class AdminController
         $rcpt = request('rcpt');
         $domain_id = request('domain');
 
+        $rule = [
+            'domain' => 'required',
+        ];
+        $custom_message = [
+            'domain.required' => 'You must select Doamin.',
+        ];
+
+        if (isset($from)) {
+            $rule['from-address'] = 'required|email';
+            $custom_message['from-address.email'] = 'The From Address must be a valid email address.';
+        }
+        if (isset($rcpt)) {
+            $rule['rcpt'] = 'regex:/^[A-Za-z0-9.]+$/';
+            $custom_message['rcpt.regex'] = 'The To Address format is invalid.';
+        }
+        request()->validate($rule, $custom_message);
+
         $domain = Domain::where('id', $domain_id)->first();
         if(isset($domain)) {
             $domain_name = $domain->domain;
@@ -768,6 +815,23 @@ class AdminController
         $from = request('from-address');
         $rcpt = request('rcpt');
         $domain_id = request('domain');
+
+        $rule = [
+            'domain' => 'required',
+        ];
+        $custom_message = [
+            'domain.required' => 'You must select Doamin.',
+        ];
+
+        if (isset($from)) {
+            $rule['from-address'] = 'required|email';
+            $custom_message['from-address.email'] = 'The From Address must be a valid email address.';
+        }
+        if (isset($rcpt)) {
+            $rule['rcpt'] = 'regex:/^[A-Za-z0-9.]+$/';
+            $custom_message['rcpt.regex'] = 'The To Address format is invalid.';
+        }
+        request()->validate($rule, $custom_message);
 
         $domain = Domain::where('id', $domain_id)->first();
         if(isset($domain)) {
