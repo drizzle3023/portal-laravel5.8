@@ -36,6 +36,8 @@
                     <tr>
                         <th class="text-center" style="width: 80px;">#</th>
                         <th class="d-none d-sm-table-cell">Domain</th>
+                        <th class="d-none d-sm-table-cell" style="width: 120px;">State</th>
+                        <th class="d-none d-sm-table-cell" style="width: 120px;">Action</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -44,6 +46,16 @@
                             <td class="text-center">{{$loop->iteration}}</td>
                             <td class="d-none d-sm-table-cell">
                                 {{$domain->domain}}
+                            </td>
+                            <td class="d-none d-sm-table-cell text-center">
+                                @if($domain->dns_active == 1)
+                                    <span class="badge badge-success">Active</span>
+                                @else
+                                    <span class="badge badge-danger">Inactive</span>
+                                @endif
+                            </td>
+                            <td class="d-none d-sm-table-cell text-center">
+                                <a href="{{url('domains/check/').'/'.$domain->id}}" class="btn btn-primary btn-sm">Check</a>
                             </td>
                         </tr>
                     @endforeach

@@ -29,6 +29,7 @@ Route::middleware('user-auth')->group(function (){
 
     Route::prefix('domains')->group(function () {
         Route::get('/', 'AdminController@showDomainPage');
+        Route::get('/check/{id}', 'AdminController@checkDomain');
     });
 
     Route::prefix('statistics')->group(function () {

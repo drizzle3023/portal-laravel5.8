@@ -202,6 +202,37 @@ class AdminController
         ]);
     }
 
+    public function checkDomain() {
+        $id = request('id');
+        $current_user_id = session()->get('user')->id;
+
+        if (Domain::where([
+            ['id', $id],
+            ['customer_id', $current_user_id],
+        ])->count() > 0) {
+            $domain_name = Domain::where('id', $id)->first()->domain;
+
+            $hosts = array();
+            getmxrr($domain_name, $hosts);
+
+            $is_active = 0;
+            foreach ($hosts as $host) {
+                if (strpos($host, 'securepostfach') !== false) {
+                    $is_active = 1;
+                    break;
+                }
+            }
+            Domain::where('id', $id)->update(['dns_active' => $is_active]);
+        }
+
+        $domains = Domain::where('customer_id', $current_user_id)->get();
+
+        return view('domain')->with([
+            'domain_array' => $domains
+        ]);
+
+    }
+
     public function showStatisticsPage() {
 
         $date_from = request('date_from');

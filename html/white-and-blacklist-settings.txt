@@ -1,0 +1,138 @@
+#blacklist
+
+X9Igsj1b {
+from = "bad-sender@bad.com";
+rcpt = "sales@cubewerk.de";
+apply {
+actions {
+reject = yes;
+}
+}
+}
+
+I4X9Mo2b {
+from = "virussender@gmail.com";
+rcpt = "support@cubewerk.at";
+apply {
+actions {
+reject = yes;
+}
+}
+}
+
+5aWty23b {
+from = "baddomain.cc";
+rcpt = "ceo@plzk.de";
+apply {
+actions {
+reject = yes;
+}
+}
+}
+
+EaCy1x7b {
+from = "@gmail.com";
+rcpt = "cubewerk.eu";
+apply {
+actions {
+reject = yes;
+}
+}
+}
+
+rN7OYs8b {
+from = "gmail.com";
+rcpt = "cubewerk.eu";
+apply {
+actions {
+reject = yes;
+}
+}
+}
+
+#whitelist
+
+k4p8Yu1w {
+from = "good-sender@hotmail.com";
+rcpt = "@cubewerk.de";
+want_spam = yes;
+}
+
+bucBu62w {
+from = "microsoft.com";
+rcpt = "sales@cubewerk.at";
+want_spam = yes;
+}
+
+wBhW4q7w {
+from = "good-sender@hotmail.com";
+rcpt = "@cubewerk.de";
+want_spam = yes;
+}
+
+082L3G8w {
+from = "sdf";
+rcpt = "123@plzk.de";
+want_spam = yes;
+}
+
+dSpCse11w {
+from = "123";
+rcpt = "@cubewerk.de";
+want_spam = yes;
+}
+
+SCTjtk12w {
+from = "````";
+rcpt = "@plzk.de";
+want_spam = yes;
+}
+
+sxxyaP13w {
+from = "1212";
+rcpt = "@plzk.de";
+want_spam = yes;
+}
+
+fLhJDH14w {
+from = "adfsadf@gmail.com";
+rcpt = "@cubewerk.eu";
+want_spam = yes;
+}
+
+324pJq15w {
+from = "```@gmail.com";
+rcpt = "@plzk.de";
+want_spam = yes;
+}
+
+5jtGUd16w {
+from = "``~~~~@asd.com";
+rcpt = "@cubewerk.eu";
+want_spam = yes;
+}
+
+bIZqe817w {
+from = "12121212";
+rcpt = "@cubewerk.at";
+want_spam = yes;
+}
+
+coJklr18w {
+from = "123123123";
+rcpt = "@plzk.de";
+want_spam = yes;
+}
+
+eY0ekh22w {
+from = "```@gmail.com";
+rcpt = "@cubewerk.at";
+want_spam = yes;
+}
+
+VlxFbR24w {
+from = "@gmail.com";
+rcpt = "@plzk.de";
+want_spam = yes;
+}
+
